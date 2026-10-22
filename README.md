@@ -28,7 +28,7 @@ You need Docker, Python 3.11+, the Claude Code CLI, and an Anthropic API key.
    ```
 2. Install teammate:
    ```bash
-   pip install git+https://github.com/<you>/teammate
+   pip install git+https://github.com/shashanknainwal/humanAI
    export ANTHROPIC_API_KEY=sk-ant-...
    ```
 3. Open a Google Meet, Zoom or Teams call, then run this from your repo:
