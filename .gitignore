@@ -1,0 +1,4 @@
+.teammate/
+__pycache__/
+*.egg-info/
+.venv/

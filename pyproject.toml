@@ -1,0 +1,26 @@
+[project]
+name = "teammate"
+version = "0.1.0"
+description = "An AI teammate you brief on a video call. It asks questions, does the work, books the follow-up, and calls back to report."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=2.1",
+    "claude-agent-sdk>=0.2",
+    "fastmcp>=4.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+
+[project.scripts]
+teammate = "teammate.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
