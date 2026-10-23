@@ -3,7 +3,7 @@
 import json
 
 from fastmcp import FastMCP
-from mcp.types import ImageContent
+from mcp.types import ImageContent, ServerCapabilities
 
 from teammate.meeting import JoinlyMeeting
 
@@ -71,3 +71,20 @@ async def test_set_status_is_skipped_when_server_lacks_ui_updates():
     server, _ = fake_joinly()
     async with JoinlyMeeting(server) as m:
         await m.set_status("thinking")  # fake server doesn't advertise joinly_ui_update
+
+
+async def test_set_status_sends_ui_update_when_supported(monkeypatch):
+    server, _ = fake_joinly()
+    sent = []
+    async with JoinlyMeeting(server) as m:
+        # Real joinly advertises this experimental capability; the fake can't.
+        caps = ServerCapabilities(experimental={"joinly_ui_update": {}})
+        monkeypatch.setattr(type(m._client), "server_capabilities", property(lambda _: caps))
+        async def capture(notification):
+            sent.append(notification.model_dump(exclude_none=True))
+        m._client.session.send_notification = capture
+        await m.set_status("thinking")
+    assert sent == [{
+        "method": "notifications/joinly_ui_update",
+        "params": {"content": {"type": "animation", "animation": "thinking", "target": "overlay"}},
+    }]

@@ -87,8 +87,8 @@ class JoinlyMeeting:
 
     async def set_status(self, animation: str | None) -> None:
         """Show "thinking" or "busy" on the bot's camera, or None to clear."""
-        result = self._client.initialize_result
-        experimental = result.capabilities.experimental if result else None
+        caps = self._client.server_capabilities
+        experimental = caps.experimental if caps else None
         if not experimental or "joinly_ui_update" not in experimental:
             return
         content = {"type": "animation", "animation": animation, "target": "overlay"}
