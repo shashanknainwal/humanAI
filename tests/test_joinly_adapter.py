@@ -65,3 +65,9 @@ async def test_adapter_round_trip():
         ("chat", "notes"),
         ("leave",),
     ]
+
+
+async def test_set_status_is_skipped_when_server_lacks_ui_updates():
+    server, _ = fake_joinly()
+    async with JoinlyMeeting(server) as m:
+        await m.set_status("thinking")  # fake server doesn't advertise joinly_ui_update

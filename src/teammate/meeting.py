@@ -15,6 +15,7 @@ from typing import Any, Protocol
 import anthropic
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
+from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +30,13 @@ class Meeting(Protocol):
     async def post_chat(self, message: str) -> None: ...
     async def snapshot(self) -> tuple[str, str]: ...
     async def new_utterances(self) -> list[dict]: ...
+    async def set_status(self, animation: str | None) -> None: ...
+
+
+class _UIUpdateNotification(BaseModel):
+    # joinly's experimental extension for driving the bot's camera animation.
+    method: str = "notifications/joinly_ui_update"
+    params: dict[str, Any] | None = None
 
 
 class JoinlyMeeting:
@@ -76,6 +84,17 @@ class JoinlyMeeting:
         if fresh:
             self._last_start = fresh[-1]["start"]
         return fresh
+
+    async def set_status(self, animation: str | None) -> None:
+        """Show "thinking" or "busy" on the bot's camera, or None to clear."""
+        result = self._client.initialize_result
+        experimental = result.capabilities.experimental if result else None
+        if not experimental or "joinly_ui_update" not in experimental:
+            return
+        content = {"type": "animation", "animation": animation, "target": "overlay"}
+        await self._client.session.send_notification(
+            _UIUpdateNotification(params={"content": content})  # type: ignore[arg-type]
+        )
 
 
 ToolHandler = Callable[[dict], Awaitable[str | list[dict]]]
@@ -204,6 +223,7 @@ class CallBrain:
     async def respond(self, heard: str) -> None:
         self.messages.append({"role": "user", "content": heard})
         while True:
+            await self._status("thinking")
             response = await self.client.beta.messages.create(
                 model=self.model,
                 max_tokens=4000,
@@ -216,6 +236,7 @@ class CallBrain:
                 fallbacks="default",
             )
             self.messages.append({"role": "assistant", "content": response.content})
+            await self._status(None)
 
             if response.stop_reason == "refusal":
                 await self._say("Sorry, that's not something I can help with.")
@@ -228,10 +249,19 @@ class CallBrain:
             tool_uses = [b for b in response.content if b.type == "tool_use"]
             if not tool_uses:
                 return
+            await self._status("busy")
             results = []
             for block in tool_uses:
                 results.append(await self._run_tool(block))
             self.messages.append({"role": "user", "content": results})
+            await self._status(None)
+
+    async def _status(self, animation: str | None) -> None:
+        # Camera animation is cosmetic; never let it break the conversation.
+        try:
+            await self.meeting.set_status(animation)
+        except Exception:
+            log.debug("Could not set camera status", exc_info=True)
 
     async def _say(self, text: str) -> None:
         self.transcript.append({"speaker": "assistant", "text": text})

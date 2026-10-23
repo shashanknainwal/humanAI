@@ -31,7 +31,7 @@ class FakeClaude:
 class FakeMeeting:
     def __init__(self, utterance_batches=()):
         self.batches = [list(b) for b in utterance_batches]
-        self.spoken, self.chat = [], []
+        self.spoken, self.chat, self.statuses = [], [], []
         self.joined = self.left = None
 
     async def join(self, url, name):
@@ -48,6 +48,9 @@ class FakeMeeting:
 
     async def snapshot(self):
         return "aW1n", "image/png"
+
+    async def set_status(self, animation):
+        self.statuses.append(animation)
 
     async def new_utterances(self):
         return self.batches.pop(0) if self.batches else []

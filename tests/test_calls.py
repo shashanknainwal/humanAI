@@ -118,3 +118,10 @@ async def test_wait_for_turn_gives_up_when_idle(fast):
 def test_format_utterances_merges_same_speaker():
     out = format_utterances([seg("a", "Sam"), seg("b", "Sam"), seg("c", None)])
     assert out == "Sam: a b\nSomeone: c"
+
+
+async def test_camera_shows_thinking_then_busy_then_clears(fast):
+    meeting = FakeMeeting()
+    claude = FakeClaude(response(tool_use("post_in_chat", {"message": "x"})), response(text("Done.")))
+    await CallBrain(meeting, "sys", client=claude).respond("hi")
+    assert meeting.statuses == ["thinking", None, "busy", None, "thinking", None]
